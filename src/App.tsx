@@ -240,17 +240,150 @@ const submit = (e: FormEvent<HTMLFormElement>) => {
         </div>
       </section>
 
-      <section className="reveal-section">
-        <div className="reveal-glow" />
-        <div className="shell narrow reveal-copy">
-          <SunMedium size={34} />
-          <p>The sun gives us light.</p>
-          <p>But health starts from within.</p>
-          <h2>Your sunshine isn’t only above you.</h2>
-          <img src="/assets/campaign-logo.png" alt="شمسك جواك" />
-          <strong>KNOW IT. CHECK IT. ACT ON IT.</strong>
-        </div>
-      </section>
+<section className="relative isolate overflow-hidden bg-[#0b0a08]">
+  {/* Background glow */}
+  <div
+    className="
+      pointer-events-none
+      absolute
+      left-1/2
+      bottom-[-220px]
+      h-[520px]
+      w-[820px]
+      -translate-x-1/2
+      rounded-full
+      bg-[radial-gradient(circle,rgba(235,165,25,0.38)_0%,rgba(173,103,12,0.18)_38%,rgba(0,0,0,0)_72%)]
+      blur-2xl
+    "
+  />
+
+  <div
+    className="
+      relative z-10
+      mx-auto
+      flex
+      max-w-5xl
+      flex-col
+      items-center
+      px-6
+      py-24
+      text-center
+      md:py-28
+      lg:py-32
+    "
+  >
+    {/* Icon */}
+    <div
+      className="
+        mb-7
+        flex
+        h-11
+        w-11
+        items-center
+        justify-center
+        rounded-full
+        border
+        border-amber-400/20
+        bg-amber-400/5
+      "
+    >
+      <SunMedium
+        size={22}
+        strokeWidth={1.8}
+        className="text-amber-400"
+      />
+    </div>
+
+    {/* Intro */}
+    <div className="mb-8 space-y-2">
+      <p
+        className="
+          font-serif
+          text-xl
+          leading-relaxed
+          text-[#cbb9a5]
+          md:text-2xl
+        "
+      >
+        The sun gives us light.
+      </p>
+
+      <p
+        className="
+          font-serif
+          text-xl
+          leading-relaxed
+          text-[#cbb9a5]
+          md:text-2xl
+        "
+      >
+        But health starts from within.
+      </p>
+    </div>
+
+    {/* Main headline */}
+    <h2
+      className="
+        max-w-4xl
+        font-serif
+        text-[clamp(3rem,6vw,5.8rem)]
+        font-medium
+        leading-[0.98]
+        tracking-[-0.04em]
+        text-white
+      "
+    >
+      Your sunshine isn’t
+      <br className="hidden sm:block" />
+      <span className="sm:ml-3">only above you.</span>
+    </h2>
+
+    {/* Campaign logo */}
+    <div className="relative mt-10 md:mt-12">
+      <div
+        className="
+          absolute
+          left-1/2
+          top-1/2
+          h-[180px]
+          w-[380px]
+          -translate-x-1/2
+          -translate-y-1/2
+          rounded-full
+          bg-amber-400/15
+          blur-3xl
+        "
+      />
+
+      <img
+        src="/assets/ChatGPT Image Sep 11, 2026, 11_49_20 PM.png"
+        alt="شمسك جواك"
+        className="
+          relative
+          z-10
+          h-auto
+          w-[280px]
+          md:w-[360px]
+          lg:w-[420px]
+        "
+      />
+    </div>
+
+    {/* Tagline */}
+    <strong
+      className="
+        mt-7
+        text-[10px]
+        font-semibold
+        tracking-[0.38em]
+        text-amber-300/80
+        md:text-xs
+      "
+    >
+      KNOW IT. CHECK IT. ACT ON IT.
+    </strong>
+  </div>
+</section>
 
       {/* <section className="launch-section" id="launch">
         <div className="shell launch-grid">
