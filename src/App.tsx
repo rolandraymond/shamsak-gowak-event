@@ -1,7 +1,11 @@
+import PassPage from './PassPage'
+
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { CalendarDays, Check, ChevronDown, Clock3, MapPin, SunMedium } from 'lucide-react'
-
+import { QRCodeSVG } from 'qrcode.react'
+import CheckInPage from './CheckInPage'
+import AdminPage from './AdminPage'
 const EVENT_DATE = new Date('2026-10-02T18:00:00+03:00')
 
 function useCountdown() {
@@ -21,56 +25,128 @@ function useCountdown() {
     }
   }, [now])
 }
+type InviteGuest = {
+  fullName: string
+  phone: string
+  email?: string | null
+  invitationCode: string | null
+  rsvpStatus: string
+  qrToken: string | null
+}
 
 function App() {
   const countdown = useCountdown()
 const [submitted, setSubmitted] = useState(false)
 
-const [name, setName] = useState('')
 const [phone, setPhone] = useState('')
+const [guest, setGuest] = useState<InviteGuest | null>(null)
+
+const [loading, setLoading] = useState(false)
+const [serverError, setServerError] = useState('')
+const [phoneError, setPhoneError] = useState('')
+
+const [isNewGuest, setIsNewGuest] = useState(false)
+
+const [name, setName] = useState('')
 const [email, setEmail] = useState('')
 
-const [errors, setErrors] = useState({
+const [registrationErrors, setRegistrationErrors] = useState({
   name: '',
-  phone: '',
   email: '',
 })
 
-const submit = (e: FormEvent<HTMLFormElement>) => {
+const lookupInvitation = async (
+  e: FormEvent<HTMLFormElement>
+) => {
   e.preventDefault()
+
+  const cleanPhone = phone.replace(/[\s-]/g, '')
+  const phoneRegex = /^(?:\+20|0)1[0125]\d{8}$/
+
+  setPhoneError('')
+  setServerError('')
+
+  if (!cleanPhone) {
+    setPhoneError('Mobile number is required.')
+    return
+  }
+
+  if (!phoneRegex.test(cleanPhone)) {
+    setPhoneError(
+      'Please enter a valid Egyptian mobile number.'
+    )
+    return
+  }
+
+  setLoading(true)
+
+  try {
+    const response = await fetch('/api/invite/lookup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        phone: cleanPhone,
+      }),
+    })
+
+    const data = await response.json()
+
+if (!response.ok) {
+  setGuest(null)
+
+  if (data.code === 'GUEST_NOT_FOUND') {
+    setIsNewGuest(true)
+    setServerError('')
+    return
+  }
+
+  setServerError(
+    data.error ||
+      'Unable to search for your registration.'
+  )
+  
+
+  return
+}
+    setIsNewGuest(false)
+
+    setGuest(data.guest)
+  } catch (error) {
+    console.error(error)
+
+    setServerError(
+      'Unable to connect. Please try again.'
+    )
+  } finally {
+    setLoading(false)
+  }
+}
+const registerNewGuest = async (
+  e: FormEvent<HTMLFormElement>
+) => {
+  e.preventDefault()
+
+  const cleanName = name.trim()
+  const cleanEmail = email.trim().toLowerCase()
+  const cleanPhone = phone.replace(/[\s-]/g, '')
+
+  const nameRegex = /^[\p{L}\s.'’\-]+$/u
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
   const newErrors = {
     name: '',
-    phone: '',
     email: '',
   }
 
-  const cleanName = name.trim()
-  const cleanPhone = phone.replace(/[\s-]/g, '')
-  const cleanEmail = email.trim()
-
-  // Letters from any language + spaces only
-  const nameRegex = /^[\p{L}\s]+$/u
-
-  // Egyptian mobile:
-  // 010 / 011 / 012 / 015
-  // +2010 / +2011 / +2012 / +2015
-  const phoneRegex = /^(?:\+20|0)1[0125]\d{8}$/
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
-
   if (!cleanName) {
     newErrors.name = 'Full name is required.'
-  } else if (cleanName.length < 3) {
-    newErrors.name = 'Please enter your full name.'
-  } else if (!nameRegex.test(cleanName)) {
-    newErrors.name = 'Name can contain letters and spaces only.'
-  }
-
-  if (!cleanPhone) {
-    newErrors.phone = 'Mobile number is required.'
-  } else if (!phoneRegex.test(cleanPhone)) {
-    newErrors.phone = 'Please enter a valid Egyptian mobile number.'
+  } else if (
+    cleanName.length < 3 ||
+    !nameRegex.test(cleanName)
+  ) {
+    newErrors.name = 'Please enter a valid full name.'
   }
 
   if (!cleanEmail) {
@@ -79,20 +155,186 @@ const submit = (e: FormEvent<HTMLFormElement>) => {
     newErrors.email = 'Please enter a valid email address.'
   }
 
-  setErrors(newErrors)
+  setRegistrationErrors(newErrors)
 
-  if (newErrors.name || newErrors.phone || newErrors.email) {
+  if (newErrors.name || newErrors.email) {
     return
   }
 
-  setSubmitted(true)
+  setLoading(true)
+  setServerError('')
 
-  window.setTimeout(() => {
-    document
-      .querySelector('#rsvp')
-      ?.scrollIntoView({ behavior: 'smooth' })
-  }, 50)
+  try {
+    const response = await fetch('/api/rsvp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: cleanName,
+        phone: cleanPhone,
+        email: cleanEmail,
+      }),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      setServerError(
+        data.error ||
+          'Unable to complete registration.'
+      )
+      return
+    }
+
+    setGuest({
+      fullName: data.guest.fullName,
+      phone: data.guest.phone,
+      email: data.guest.email,
+      invitationCode: data.guest.invitationCode,
+      rsvpStatus: data.guest.rsvpStatus,
+      qrToken: data.guest.qrToken,
+    })
+
+    setIsNewGuest(false)
+    setSubmitted(true)
+
+    window.setTimeout(() => {
+      document
+        .querySelector('#rsvp')
+        ?.scrollIntoView({
+          behavior: 'smooth',
+        })
+    }, 50)
+
+  } catch (error) {
+    console.error(error)
+
+    setServerError(
+      'Unable to connect. Please try again.'
+    )
+  } finally {
+    setLoading(false)
+  }
 }
+
+const confirmAttendance = async (
+  e: FormEvent<HTMLFormElement>
+) => {
+  e.preventDefault()
+
+  if (!guest) {
+    return
+  }
+
+  setLoading(true)
+  setServerError('')
+
+  try {
+    const response = await fetch('/api/rsvp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        phone: guest.phone,
+      }),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      if (data.code === 'ALREADY_CONFIRMED') {
+      setGuest({
+        ...guest,
+        fullName: data.guest.fullName,
+        invitationCode: data.guest.invitationCode,
+        rsvpStatus: 'confirmed',
+        qrToken: data.guest.qrToken,
+      })
+
+        return
+      }
+
+      setServerError(
+        data.error ||
+          'Unable to confirm attendance.'
+      )
+
+      return
+    }
+
+setGuest({
+  ...guest,
+  fullName: data.guest.fullName,
+  phone: data.guest.phone,
+  email: data.guest.email,
+  invitationCode: data.guest.invitationCode,
+  rsvpStatus: 'confirmed',
+  qrToken: data.guest.qrToken,
+})
+
+    setSubmitted(true)
+
+    window.setTimeout(() => {
+      document
+        .querySelector('#rsvp')
+        ?.scrollIntoView({
+          behavior: 'smooth',
+        })
+    }, 50)
+
+  } catch (error) {
+    console.error(error)
+
+    setServerError(
+      'Unable to connect. Please try again.'
+    )
+  } finally {
+    setLoading(false)
+  }
+}
+
+
+const resetInvitation = () => {
+  setGuest(null)
+  setSubmitted(false)
+
+  setPhone('')
+  setName('')
+  setEmail('')
+
+  setIsNewGuest(false)
+
+  setPhoneError('')
+  setServerError('')
+
+  setRegistrationErrors({
+    name: '',
+    email: '',
+  })
+}
+
+const getCheckInUrl = (qrToken: string) => {
+  return `${window.location.origin}/check-in?token=${encodeURIComponent(qrToken)}`
+}
+
+
+
+
+  if (window.location.pathname === '/pass') {
+  return <PassPage />
+}
+
+  if (window.location.pathname === '/admin') {
+  return <AdminPage />
+}
+
+if (window.location.pathname === '/check-in') {
+  return <CheckInPage />
+}
+
+
 
   return (
     <main>
@@ -102,7 +344,7 @@ const submit = (e: FormEvent<HTMLFormElement>) => {
         <div className="grain" />
 
         <nav className="nav shell">
-          <img src="/assets/limitless-naturals.png" alt="Limitless Naturals" className="brand" />
+          <img src="/assets/limitless_black.png" alt="Limitless Naturals" className="brand" />
           <a className="nav-cta" href="#rsvp">RSVP</a>
         </nav>
 
@@ -411,203 +653,557 @@ const submit = (e: FormEvent<HTMLFormElement>) => {
         <div className="shell rsvp-grid">
           <div className="rsvp-copy">
             <span className="section-kicker">YOUR INVITATION</span>
-            <h2>Join us for<br />شمسك جواك</h2>
+        <h2>
+          Join us for
+          <br />
+
+        <span
+          className="
+            font-shamsak
+            inline-block
+            origin-center
+            scale-x-110
+            text-6xl
+            leading-none
+          "
+        >
+          شمسك جواك
+        </span>
+        </h2>        
             <p>Confirm your attendance and we’ll keep your invitation details ready for the event.</p>
             <div className="mini-meta"><CalendarDays /> 02 OCT 2026</div>
             <div className="mini-meta"><MapPin /> THE NILE RITZ-CARLTON, CAIRO</div>
           </div>
 
           <div className="rsvp-card">
-            {!submitted ? (
-            <form onSubmit={submit} noValidate className="space-y-5">
-              <div className="form-head">
-                <p>RSVP</p>
-                <h3>Confirm your attendance</h3>
-              </div>
 
-              {/* Full Name */}
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium">
-                  Full name
-                </span>
+    {!submitted ? (
 
-                <input
-                  type="text"
-                  value={name}
-                  autoComplete="name"
-                  maxLength={60}
-                  placeholder="Dr. Full Name"
-                  onChange={(e) => {
-                    const value = e.target.value
+      isNewGuest ? (
 
-                    // Prevent numbers and special characters
-                    if (/^[\p{L}\s]*$/u.test(value)) {
-                      setName(value)
+        <form
+          onSubmit={registerNewGuest}
+          noValidate
+          className="space-y-5"
+        >
 
-                      if (errors.name) {
-                        setErrors(prev => ({
-                          ...prev,
-                          name: '',
-                        }))
-                      }
-                    }
-                  }}
-                  className={`
-                    w-full rounded-xl border bg-white px-4 py-3
-                    text-neutral-900 outline-none transition
-                    placeholder:text-neutral-400
-                    ${
-                      errors.name
-                        ? 'border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/10'
-                        : 'border-neutral-300 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10'
-                    }
-                  `}
-                />
+          <div className="form-head">
+            <p>NEW REGISTRATION</p>
+            <h3>Complete your registration</h3>
+          </div>
 
-                {errors.name && (
-                  <p className="mt-1.5 text-sm font-medium text-red-500">
-                    {errors.name}
+          <p className="text-sm leading-relaxed text-neutral-600">
+            We couldn't find an existing registration for this number.
+            Complete your details below to join the event.
+          </p>
+
+          {/* Full Name */}
+          <label className="block">
+
+            <span className="mb-2 block text-sm font-medium">
+              Full name
+            </span>
+
+            <input
+              type="text"
+              value={name}
+              autoComplete="name"
+              maxLength={80}
+              placeholder="Dr. Full Name"
+              onChange={(e) => {
+                setName(e.target.value)
+
+                if (registrationErrors.name) {
+                  setRegistrationErrors(prev => ({
+                    ...prev,
+                    name: '',
+                  }))
+                }
+              }}
+              className={`
+                w-full rounded-xl border bg-white px-4 py-3
+                text-neutral-900 outline-none transition
+                placeholder:text-neutral-400
+                ${
+                  registrationErrors.name
+                    ? 'border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/10'
+                    : 'border-neutral-300 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10'
+                }
+              `}
+            />
+
+            {registrationErrors.name && (
+              <p className="mt-1.5 text-sm font-medium text-red-500">
+                {registrationErrors.name}
+              </p>
+            )}
+
+          </label>
+
+          {/* Mobile */}
+          <label className="block">
+
+            <span className="mb-2 block text-sm font-medium">
+              Mobile number
+            </span>
+
+            <input
+              type="tel"
+              value={phone}
+              readOnly
+              className="
+                w-full rounded-xl border
+                border-neutral-200
+                bg-neutral-100
+                px-4 py-3
+                text-neutral-600
+              "
+            />
+
+          </label>
+
+          {/* Email */}
+          <label className="block">
+
+            <span className="mb-2 block text-sm font-medium">
+              Email address
+            </span>
+
+            <input
+              type="email"
+              value={email}
+              autoComplete="email"
+              maxLength={120}
+              placeholder="doctor@example.com"
+              onChange={(e) => {
+                setEmail(e.target.value)
+
+                if (registrationErrors.email) {
+                  setRegistrationErrors(prev => ({
+                    ...prev,
+                    email: '',
+                  }))
+                }
+              }}
+              className={`
+                w-full rounded-xl border bg-white px-4 py-3
+                text-neutral-900 outline-none transition
+                placeholder:text-neutral-400
+                ${
+                  registrationErrors.email
+                    ? 'border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/10'
+                    : 'border-neutral-300 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10'
+                }
+              `}
+            />
+
+            {registrationErrors.email && (
+              <p className="mt-1.5 text-sm font-medium text-red-500">
+                {registrationErrors.email}
+              </p>
+            )}
+
+          </label>
+
+          <label className="flex cursor-pointer items-start gap-3">
+
+            <input
+              required
+              type="checkbox"
+              className="
+                mt-1 h-4 w-4
+                rounded border-neutral-300
+                accent-orange-500
+              "
+            />
+
+            <span className="text-sm leading-relaxed text-neutral-600">
+              I agree to receive event confirmation and
+              event-related communication.
+            </span>
+
+          </label>
+
+          {serverError && (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              {serverError}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="
+              button button-primary full
+              w-full transition
+              active:scale-[0.98]
+              disabled:cursor-not-allowed
+              disabled:opacity-60
+            "
+          >
+            {loading
+              ? 'REGISTERING...'
+              : 'COMPLETE REGISTRATION'}
+          </button>
+
+          <button
+            type="button"
+            onClick={resetInvitation}
+            disabled={loading}
+            className="button button-ghost full w-full"
+          >
+            USE ANOTHER NUMBER
+          </button>
+
+        </form>
+
+      ) : !guest ? (
+
+                /* =========================
+                  STEP 1 — FIND INVITATION
+                  ========================= */
+
+                <form
+                  onSubmit={lookupInvitation}
+                  noValidate
+                  className="space-y-5"
+                >
+
+                  <div className="form-head">
+                    <p>YOUR INVITATION</p>
+                    <h3>Find your invitation</h3>
+                  </div>
+
+                  <p className="text-sm leading-relaxed text-neutral-600">
+                    Enter the mobile number associated with your invitation.
                   </p>
-                )}
-              </label>
 
-              {/* Mobile */}
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium">
-                  Mobile number
-                </span>
+                  <label className="block">
 
-                <input
-                  type="tel"
-                  inputMode="tel"
-                  value={phone}
-                  autoComplete="tel"
-                  maxLength={18}
-                  placeholder="+20 1X XXX XXXX"
-                  onChange={(e) => {
-                    const value = e.target.value
+                    <span className="mb-2 block text-sm font-medium">
+                      Mobile number
+                    </span>
 
-                    // Only numbers, spaces, hyphen and one +
-                    if (/^\+?[0-9\s-]*$/.test(value)) {
-                      setPhone(value)
+                    <input
+                      type="tel"
+                      inputMode="tel"
+                      value={phone}
+                      autoComplete="tel"
+                      maxLength={18}
+                      placeholder="010 XXX XXXX"
+                      onChange={(e) => {
+                        const value = e.target.value
 
-                      if (errors.phone) {
-                        setErrors(prev => ({
-                          ...prev,
-                          phone: '',
-                        }))
-                      }
-                    }
-                  }}
-                  className={`
-                    w-full rounded-xl border bg-white px-4 py-3
-                    text-neutral-900 outline-none transition
-                    placeholder:text-neutral-400
-                    ${
-                      errors.phone
-                        ? 'border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/10'
-                        : 'border-neutral-300 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10'
-                    }
-                  `}
-                />
+                        if (/^\+?[0-9\s-]*$/.test(value)) {
+                          setPhone(value)
 
-                {errors.phone && (
-                  <p className="mt-1.5 text-sm font-medium text-red-500">
-                    {errors.phone}
+                          if (phoneError) {
+                            setPhoneError('')
+                          }
+
+                          if (serverError) {
+                            setServerError('')
+                          }
+                        }
+                      }}
+                      className={`
+                        w-full rounded-xl border
+                        bg-white px-4 py-3
+                        text-neutral-900
+                        outline-none transition
+                        placeholder:text-neutral-400
+                        ${
+                          phoneError
+                            ? 'border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/10'
+                            : 'border-neutral-300 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10'
+                        }
+                      `}
+                    />
+
+                    {phoneError && (
+                      <p className="mt-1.5 text-sm font-medium text-red-500">
+                        {phoneError}
+                      </p>
+                    )}
+
+                  </label>
+
+                  {serverError && (
+                    <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                      {serverError}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="
+                      button button-primary full
+                      w-full transition
+                      active:scale-[0.98]
+                      disabled:cursor-not-allowed
+                      disabled:opacity-60
+                    "
+                  >
+                    {loading
+                      ? 'SEARCHING...'
+                      : 'FIND MY INVITATION'}
+                  </button>
+
+                </form>
+
+              ) : guest.rsvpStatus === 'confirmed' ? (
+
+                /* =========================
+                  ALREADY CONFIRMED
+                  ========================= */
+
+                <div className="success-state">
+
+                  <div className="success-icon">
+                    <Check />
+                  </div>
+
+                  <p className="success-kicker">
+                    ALREADY CONFIRMED
                   </p>
-                )}
-              </label>
 
-              {/* Email */}
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium">
-                  Email address
-                </span>
+                  <h3>
+                    Welcome, {guest.fullName}.
+                  </h3>
 
-                <input
-                  type="email"
-                  value={email}
-                  autoComplete="email"
-                  maxLength={120}
-                  placeholder="doctor@example.com"
-                  onChange={(e) => {
-                    setEmail(e.target.value)
-
-                    if (errors.email) {
-                      setErrors(prev => ({
-                        ...prev,
-                        email: '',
-                      }))
-                    }
-                  }}
-                  className={`
-                    w-full rounded-xl border bg-white px-4 py-3
-                    text-neutral-900 outline-none transition
-                    placeholder:text-neutral-400
-                    ${
-                      errors.email
-                        ? 'border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/10'
-                        : 'border-neutral-300 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10'
-                    }
-                  `}
-                />
-
-                {errors.email && (
-                  <p className="mt-1.5 text-sm font-medium text-red-500">
-                    {errors.email}
+                  <p>
+                    Your attendance has already been confirmed.
                   </p>
-                )}
-              </label>
 
-              {/* Agreement */}
-              <label className="flex cursor-pointer items-start gap-3">
-                <input
-                  required
-                  type="checkbox"
-                  className="
-                    mt-1 h-4 w-4
-                    rounded border-neutral-300
-                    accent-orange-500
-                  "
-                />
+                  <div className="ticket">
+                    <span>02 OCT 2026</span>
+                    <strong>THE NILE RITZ-CARLTON</strong>
+                    <small>CAIRO</small>
+                  </div>
 
-                <span className="text-sm leading-relaxed text-neutral-600">
-                  I agree to receive event confirmation and event-related communication.
-                </span>
-              </label>
+                  {guest.invitationCode && (
+                    <div className="mt-6">
 
-              <button
-                className="
-                  button button-primary full
-                  w-full transition
-                  active:scale-[0.98]
-                "
-                type="submit"
-              >
-                CONFIRM MY ATTENDANCE
-              </button>
-            </form>
+                      <span className="block text-xs tracking-[0.2em] text-neutral-500">
+                        INVITATION ID
+                      </span>
+
+                      <strong className="mt-1 block text-2xl">
+                        {guest.invitationCode}
+                      </strong>
+
+                    </div>
+                  )}
+                  
+                  {guest.qrToken && (
+
+                <div className="mt-8 flex flex-col items-center">
+
+                  <div className="rounded-2xl bg-white p-4 shadow-md">
+                    <QRCodeSVG
+                      value={getCheckInUrl(guest.qrToken)}
+                      size={190}
+                      level="H"
+                      includeMargin
+                    />
+                  </div>
+
+                  <p className="mt-4 text-sm font-semibold text-neutral-800">
+                    YOUR EVENT QR CODE
+                  </p>
+
+                  <p className="mt-1 text-xs text-neutral-500">
+                    Keep this QR code ready for event check-in.
+                  </p>
+
+                </div>
+              )}
+                  <button
+                    type="button"
+                    onClick={resetInvitation}
+                    className="button button-ghost full mt-6 w-full"
+                  >
+                    USE ANOTHER NUMBER
+                  </button>
+
+                </div>
+
+              ) : (
+
+                /* =========================
+                  STEP 2 — CONFIRM
+                  ========================= */
+
+                <form
+                  onSubmit={confirmAttendance}
+                  className="space-y-5"
+                >
+
+                  <div className="form-head">
+                    <p>INVITATION FOUND</p>
+                    <h3>
+                      Welcome, {guest.fullName}
+                    </h3>
+                  </div>
+
+                  <div className="
+                    rounded-2xl
+                    border border-neutral-200
+                    bg-neutral-50
+                    p-5
+                  ">
+
+                    <span className="block text-xs font-semibold tracking-[0.18em] text-neutral-500">
+                      INVITATION ID
+                    </span>
+
+                    <strong className="mt-2 block text-2xl text-neutral-900">
+                      {guest.invitationCode}
+                    </strong>
+
+                    <span className="mt-4 block text-sm text-neutral-500">
+                      02 OCT 2026
+                    </span>
+
+                    <span className="mt-1 block text-sm font-medium text-neutral-700">
+                      THE NILE RITZ-CARLTON, CAIRO
+                    </span>
+
+                  </div>
+
+                  <label className="flex cursor-pointer items-start gap-3">
+
+                    <input
+                      required
+                      type="checkbox"
+                      className="
+                        mt-1 h-4 w-4
+                        rounded border-neutral-300
+                        accent-orange-500
+                      "
+                    />
+
+                    <span className="text-sm leading-relaxed text-neutral-600">
+                      I agree to receive event confirmation
+                      and event-related communication.
+                    </span>
+
+                  </label>
+
+                  {serverError && (
+                    <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                      {serverError}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="
+                      button button-primary full
+                      w-full transition
+                      active:scale-[0.98]
+                      disabled:cursor-not-allowed
+                      disabled:opacity-60
+                    "
+                  >
+                    {loading
+                      ? 'CONFIRMING...'
+                      : 'CONFIRM MY ATTENDANCE'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={resetInvitation}
+                    disabled={loading}
+                    className="button button-ghost full w-full"
+                  >
+                    USE ANOTHER NUMBER
+                  </button>
+
+                </form>
+
+              )
+
             ) : (
+
+              /* =========================
+                CONFIRMATION SUCCESS
+                ========================= */
+
               <div className="success-state">
-                <div className="success-icon"><Check /></div>
-                <p className="success-kicker">YOU’RE IN</p>
-                <h3>Thank you{name ? `, ${name}` : ''}.</h3>
-                <p>Your attendance at شمسك جواك has been confirmed.</p>
+
+                <div className="success-icon">
+                  <Check />
+                </div>
+
+                <p className="success-kicker">
+                  YOU’RE IN
+                </p>
+
+                <h3>
+                  Thank you{guest ? `, ${guest.fullName}` : ''}.
+                </h3>
+
+                <p>
+                  Your attendance at شمسك جواك has been confirmed.
+                </p>
+
                 <div className="ticket">
                   <span>02 OCT 2026</span>
                   <strong>THE NILE RITZ-CARLTON</strong>
                   <small>CAIRO</small>
                 </div>
-                <p className="success-note">Next step: we’ll connect this screen to the real guest database, unique invitation ID, QR code, email and WhatsApp confirmation.</p>
+
+                {guest?.invitationCode && (
+                  <div className="mt-6">
+
+                    <span className="block text-xs tracking-[0.2em] text-neutral-500">
+                      INVITATION ID
+                    </span>
+
+                    <strong className="mt-1 block text-2xl">
+                      {guest.invitationCode}
+                    </strong>
+
+                  </div>
+                )}
+
+                {guest?.qrToken && (
+  <div className="mt-8 flex flex-col items-center">
+
+                  <div className="rounded-2xl bg-white p-4 shadow-md">
+                    <QRCodeSVG
+                      value={getCheckInUrl(guest.qrToken)}
+                      size={190}
+                      level="H"
+                      includeMargin
+                    />
+                  </div>
+
+                  <p className="mt-4 text-sm font-semibold text-neutral-800">
+                    YOUR EVENT QR CODE
+                  </p>
+
+                  <p className="mt-1 max-w-xs text-center text-xs leading-relaxed text-neutral-500">
+                    Keep this QR code ready for check-in at the event.
+                  </p>
+
+                </div>
+              )}
+
               </div>
+
             )}
+
           </div>
         </div>
       </section>
 
       <footer>
         <div className="shell footer-inner">
-          <img src="/assets/limitless-naturals.png" alt="Limitless Naturals" />
+          <img src="/assets/limitless_black.png" alt="Limitless Naturals" />
           <div>
             <strong>شمسك جواك</strong>
             <span>LIMITLESS OSSOFORTIN LAUNCH EVENT • 2026</span>
@@ -616,6 +1212,7 @@ const submit = (e: FormEvent<HTMLFormElement>) => {
       </footer>
     </main>
   )
+  
 }
 
 export default App

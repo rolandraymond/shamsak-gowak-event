@@ -13,7 +13,14 @@
   --gold: #f4ad00;
   --orange: #ef7c00;
 }
+@import url('https://fonts.googleapis.com/css2?family=Lalezar&display=swap');
 
+.font-shamsak {
+  font-family: 'Lalezar', sans-serif;
+  text-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.12),
+    0 4px 8px rgba(0, 0, 0, 0.08);
+}
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body { margin: 0; background: var(--cream); }
