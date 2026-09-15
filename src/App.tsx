@@ -29,6 +29,7 @@ type InviteGuest = {
   fullName: string
   phone: string
   email?: string | null
+  specialty?: string | null
   invitationCode: string | null
   rsvpStatus: string
   qrToken: string | null
@@ -49,10 +50,19 @@ const [isNewGuest, setIsNewGuest] = useState(false)
 
 const [name, setName] = useState('')
 const [email, setEmail] = useState('')
+const [specialty, setSpecialty] = useState('')
+const [governorate, setGovernorate] = useState('')
+const [invitedBy, setInvitedBy] = useState('')
+const [consentAccepted, setConsentAccepted] =
+  useState(false)
 
 const [registrationErrors, setRegistrationErrors] = useState({
   name: '',
   email: '',
+  specialty: '',
+  governorate: '',
+  invitedBy: '',
+
 })
 
 const lookupInvitation = async (
@@ -138,6 +148,10 @@ const registerNewGuest = async (
   const newErrors = {
     name: '',
     email: '',
+    specialty: '',
+    governorate: '',
+   invitedBy: '',
+
   }
 
   if (!cleanName) {
@@ -155,11 +169,31 @@ const registerNewGuest = async (
     newErrors.email = 'Please enter a valid email address.'
   }
 
-  setRegistrationErrors(newErrors)
+if (!specialty) {
+  newErrors.specialty = 'Please select your specialty.'
+}
 
-  if (newErrors.name || newErrors.email) {
-    return
-  }
+if (!governorate) {
+  newErrors.governorate =
+    'Please select your governorate.'
+}
+
+if (!invitedBy) {
+  newErrors.invitedBy =
+    'Please select who invited you.'
+}
+
+setRegistrationErrors(newErrors)
+
+if (
+  newErrors.name ||
+  newErrors.email ||
+  newErrors.specialty ||
+  newErrors.governorate ||
+  newErrors.invitedBy
+) {
+  return
+}
 
   setLoading(true)
   setServerError('')
@@ -174,6 +208,9 @@ const registerNewGuest = async (
         name: cleanName,
         phone: cleanPhone,
         email: cleanEmail,
+        specialty,
+        governorate,
+        invitedBy,
       }),
     })
 
@@ -191,6 +228,7 @@ const registerNewGuest = async (
       fullName: data.guest.fullName,
       phone: data.guest.phone,
       email: data.guest.email,
+      specialty: data.guest.specialty,
       invitationCode: data.guest.invitationCode,
       rsvpStatus: data.guest.rsvpStatus,
       qrToken: data.guest.qrToken,
@@ -303,6 +341,10 @@ const resetInvitation = () => {
   setPhone('')
   setName('')
   setEmail('')
+  setSpecialty('')
+  setGovernorate('')
+  setInvitedBy('')
+  setConsentAccepted(false)
 
   setIsNewGuest(false)
 
@@ -312,6 +354,10 @@ const resetInvitation = () => {
   setRegistrationErrors({
     name: '',
     email: '',
+    specialty: '',
+    governorate: '',
+    invitedBy: '',
+
   })
 }
 
@@ -357,10 +403,16 @@ if (window.location.pathname === '/check-in') {
               transition={{ duration: 1, ease: 'easeOut' }}
             >
               <div className="portrait-sun" />
+
               <img
-                src="/assets/ahmed-el-ghandour.webp"
-                alt="Ahmed El Ghandour / El Daheeh"
-                className="hero-portrait"
+                src="/assets/ahmed-el-ghandour2.png"
+                alt="SPECIAL GUEST"
+                className="
+                  hero-portrait
+                  special-guest-blur
+                  scale-105
+                  select-none
+                "
               />
               <span className="portrait-label">SPECIAL GUEST</span>
             </motion.div>
@@ -372,21 +424,29 @@ if (window.location.pathname === '/check-in') {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: .8 }}
               >
-                <span>LIMITLESS OSSOFORTIN</span>
+                <span>shamsak gowak</span>
                 <i />
                 <span>LAUNCH EVENT</span>
               </motion.div>
 
-              <motion.div
-                className="guest-heading"
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: .85, delay: .15 }}
-              >
-                <span className="guest-kicker">SPECIAL APPEARANCE</span>
-                <h1>Ahmed El Ghandour</h1>
-                <p className="guest-alias">EL DAHEEH</p>
-              </motion.div>
+                <motion.div
+                  className="guest-heading "
+                  initial={{ opacity: 0, y: 24 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.85, delay: 0.15 }}
+                >
+                  <span className="text-xs font-semibold tracking-[0.28em] uppercase text-black/60">
+                    SPECIAL GUEST
+                  </span>
+
+                  <h1 className="mt-3 text-4xl font-semibold text-black md:text-6xl">
+                    Guess the Guest
+                  </h1>
+
+                  <p className="mt-3 text-sm tracking-[0.18em] uppercase text-black/60">
+                    Can you guess who’s joining us?
+                  </p>
+                </motion.div>
 
               <motion.div
                 className="launch-lockup"
@@ -459,28 +519,58 @@ if (window.location.pathname === '/check-in') {
         </div>
       </section>
 
-      <section className="facts-section">
-        <div className="shell">
-          <div className="facts-grid">
-            <article>
-              <span className="fact-no">01</span>
-              <h3>Look around.</h3>
-              <p>We live under the sun — one of the strongest visual symbols of life, energy and movement.</p>
-            </article>
-            <article>
-              <span className="fact-no">02</span>
-              <h3>Look within.</h3>
-              <p>Your daily routine, time outdoors and other factors can influence your Vitamin D status.</p>
-            </article>
-            <article>
-              <span className="fact-no">03</span>
-              <h3>Know your status.</h3>
-              <p>Awareness starts with understanding. Medical assessment and testing can help you know where you stand.</p>
-            </article>
-          </div>
-          <p className="disclaimer">Awareness content only. This website does not provide medical diagnosis or individualized treatment advice.</p>
-        </div>
-      </section>
+<section className="facts-section">
+  <div className="shell">
+
+<div className="facts-grid">
+
+      <article>
+      <span className="fact-no">01</span>
+
+      <h3>Look Around</h3>
+
+      <p>
+        How much sunlight surrounds us every day?
+        We see it, feel it, and live with it. But is sunlight alone
+        enough to give our bodies the Vitamin D they need?
+      </p>
+    </article>
+
+    <article>
+      <span className="fact-no">02</span>
+
+      <h3>Look Within</h3>
+
+      <p>
+        Are we truly benefiting from the sun?
+        Being exposed to sunlight doesn’t always mean your body is
+        producing enough Vitamin D. Many factors can affect how much
+        your body actually gets.
+      </p>
+    </article>
+
+    <article>
+      <span className="fact-no">03</span>
+
+      <h3>Know Your Status</h3>
+
+      <p>
+        Do you know how much Vitamin D your body is getting?
+        The answer isn’t always visible. Knowing your Vitamin D status
+        can help you understand what your body needs and make more
+        informed choices.
+      </p>
+    </article>
+
+    </div>
+
+    <p className="disclaimer">
+      Awareness content only. This website does not provide medical diagnosis or
+      individualized treatment advice.
+    </p>
+
+  </div>
+</section>
 
 <section className="relative isolate overflow-hidden bg-[#0b0a08]">
   {/* Background glow */}
@@ -657,18 +747,11 @@ if (window.location.pathname === '/check-in') {
           Join us for
           <br />
 
-        <span
-          className="
-            font-shamsak
-            inline-block
-            origin-center
-            scale-x-110
-            text-6xl
-            leading-none
-          "
-        >
-          شمسك جواك
-        </span>
+<img
+  src="/assets/shamsak-gowak-text.png"
+  alt="شمسك جواك"
+  className="w-[380px] max-w-full h-auto -translate-x-12"
+/>
         </h2>        
             <p>Confirm your attendance and we’ll keep your invitation details ready for the event.</p>
             <div className="mini-meta"><CalendarDays /> 02 OCT 2026</div>
@@ -709,7 +792,7 @@ if (window.location.pathname === '/check-in') {
               value={name}
               autoComplete="name"
               maxLength={80}
-              placeholder="Dr. Full Name"
+              placeholder="Full Name"
               onChange={(e) => {
                 setName(e.target.value)
 
@@ -804,23 +887,238 @@ if (window.location.pathname === '/check-in') {
             )}
 
           </label>
+            <div className="space-y-2">
 
-          <label className="flex cursor-pointer items-start gap-3">
+            <label
+              htmlFor="specialty"
+              className="block text-sm font-medium text-neutral-800"
+            >
+              Specialty / Profession
+            </label>
 
-            <input
-              required
-              type="checkbox"
+            <select
+              id="specialty"
+              value={specialty}
+              onChange={(e) => {
+                setSpecialty(e.target.value)
+
+                setRegistrationErrors((prev) => ({
+                  ...prev,
+                  specialty: '',
+                }))
+              }}
               className="
-                mt-1 h-4 w-4
-                rounded border-neutral-300
-                accent-orange-500
+                w-full
+                rounded-2xl
+                border
+                border-neutral-300
+                bg-white
+                px-4
+                py-3.5
+                text-neutral-900
+                outline-none
+                transition
+                focus:border-[#e5a01a]
+                focus:ring-2
+                focus:ring-[#e5a01a]/20
               "
-            />
+            >
+              <option value="">
+                Select your specialty
+              </option>
 
-            <span className="text-sm leading-relaxed text-neutral-600">
-              I agree to receive event confirmation and
-              event-related communication.
-            </span>
+              <option value="Influencer">
+                Influencer
+              </option>
+
+              <option value="Nutritionist">
+                Nutritionist
+              </option>
+
+              <option value="Orthopedics">
+                Orthopedics
+              </option>
+
+              <option value="Internist">
+                Internist
+              </option>
+
+              <option value="Gynecologist">
+                Gynecologist
+              </option>
+
+              <option value="Dermatologist">
+                Dermatologist
+              </option>
+
+              <option value="Pharmacist">
+                Pharmacist
+              </option>
+            </select>
+
+            {registrationErrors.specialty && (
+              <p className="text-sm text-red-600">
+                {registrationErrors.specialty}
+              </p>
+            )}
+          </div>
+            <div className="space-y-2">
+            <label
+              htmlFor="governorate"
+              className="block text-sm font-medium text-neutral-800"
+            >
+              Governorate
+            </label>
+
+            <select
+              id="governorate"
+              value={governorate}
+              onChange={(e) => {
+                setGovernorate(e.target.value)
+
+                setRegistrationErrors((prev) => ({
+                  ...prev,
+                  governorate: '',
+                }))
+              }}
+              className="
+                w-full
+                rounded-2xl
+                border
+                border-neutral-300
+                bg-white
+                px-4
+                py-3.5
+                text-neutral-900
+                outline-none
+                transition
+                focus:border-[#e5a01a]
+                focus:ring-4
+                focus:ring-[#e5a01a]/10
+              "
+            >
+              <option value="">Select Governorate</option>
+              <option value="Alexandria">Alexandria</option>
+              <option value="Aswan">Aswan</option>
+              <option value="Asyut">Asyut</option>
+              <option value="Beheira">Beheira</option>
+              <option value="Beni Suef">Beni Suef</option>
+              <option value="Cairo">Cairo</option>
+              <option value="Dakahlia">Dakahlia</option>
+              <option value="Damietta">Damietta</option>
+              <option value="Fayoum">Fayoum</option>
+              <option value="Gharbia">Gharbia</option>
+              <option value="Giza">Giza</option>
+              <option value="Ismailia">Ismailia</option>
+              <option value="Kafr El Sheikh">Kafr El Sheikh</option>
+              <option value="Luxor">Luxor</option>
+              <option value="Matrouh">Matrouh</option>
+              <option value="Minya">Minya</option>
+              <option value="Monufia">Monufia</option>
+              <option value="New Valley">New Valley</option>
+              <option value="North Sinai">North Sinai</option>
+              <option value="Port Said">Port Said</option>
+              <option value="Qalyubia">Qalyubia</option>
+              <option value="Qena">Qena</option>
+              <option value="Red Sea">Red Sea</option>
+              <option value="Sharqia">Sharqia</option>
+              <option value="Sohag">Sohag</option>
+              <option value="South Sinai">South Sinai</option>
+              <option value="Suez">Suez</option>
+            </select>
+
+            {registrationErrors.governorate && (
+              <p className="text-sm text-red-600">
+                {registrationErrors.governorate}
+              </p>
+            )}
+
+            </div>
+
+
+            <div className="space-y-2">
+
+              <label
+                htmlFor="invitedBy"
+                className="block text-sm font-medium text-neutral-800"
+              >
+                Invited By
+              </label>
+
+              <select
+                id="invitedBy"
+                value={invitedBy}
+                onChange={(e) => {
+                  setInvitedBy(e.target.value)
+
+                  setRegistrationErrors((prev) => ({
+                    ...prev,
+                    invitedBy: '',
+                  }))
+                }}
+                className="
+                  w-full
+                  rounded-2xl
+                  border
+                  border-neutral-300
+                  bg-white
+                  px-4
+                  py-3.5
+                  text-neutral-900
+                  outline-none
+                  transition
+                  focus:border-[#e5a01a]
+                  focus:ring-4
+                  focus:ring-[#e5a01a]/10
+                "
+              >
+                <option value="">Select Invitation Team</option>
+                <option value="Medical Team">Medical Team</option>
+                <option value="PR Team">PR Team</option>
+                <option value="Chain Team">Chain Team</option>
+                <option value="Sales Team">Sales Team</option>
+                <option value="E-Commerce Team">
+                  E-Commerce Team
+                </option>
+              </select>
+
+              {registrationErrors.invitedBy && (
+                <p className="text-sm text-red-600">
+                  {registrationErrors.invitedBy}
+                </p>
+              )}
+            </div>
+            <label className="flex cursor-pointer items-start gap-3">
+              
+              <input
+                required
+                type="checkbox"
+                checked={consentAccepted}
+                onChange={(e) =>
+                  setConsentAccepted(e.target.checked)
+                }
+                className="
+                  mt-1 h-4 w-4
+                  rounded border-neutral-300
+                  accent-orange-500
+                "
+              />
+
+            <div className="text-sm leading-relaxed text-neutral-600">
+              <span className="font-semibold text-neutral-800">
+                I have read and agree to the event rules:
+              </span>
+
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                <li>This invitation is valid for one guest only.</li>
+                <li>Children are not permitted at the event.</li>
+              </ul>
+
+              <p className="mt-2">
+                I agree to receive event confirmation and
+                event-related communications.
+              </p>
+            </div>
 
           </label>
 
@@ -832,7 +1130,7 @@ if (window.location.pathname === '/check-in') {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !consentAccepted}
             className="
               button button-primary full
               w-full transition

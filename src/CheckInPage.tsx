@@ -4,6 +4,7 @@ import { Check, CircleAlert, LoaderCircle, MapPin } from 'lucide-react'
 type CheckInGuest = {
   id: number
   fullName: string
+  specialty: string | null
   invitationCode: string | null
   rsvpStatus: string
   isVip: boolean
@@ -12,6 +13,8 @@ type CheckInGuest = {
   checkedIn: boolean
   checkedInAt: string | null
 }
+
+
 
 export default function CheckInPage() {
   const [guest, setGuest] = useState<CheckInGuest | null>(null)
@@ -154,6 +157,16 @@ export default function CheckInPage() {
                 {guest.isVip ? 'VIP' : 'Guest'}
               </strong>
             </div>
+
+            <div className="flex items-center justify-between gap-4">
+                <span className="text-sm text-neutral-500">
+                  Specialty / Profession
+                </span>
+
+                <strong className="text-right text-sm text-neutral-900">
+                  {guest.specialty || 'Not provided'}
+                </strong>
+              </div>
 
             <div className="flex items-center justify-between">
               <span className="text-sm text-neutral-500">

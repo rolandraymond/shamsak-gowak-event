@@ -57,6 +57,7 @@ type AdminGuest = {
   fullName: string
   phone: string
   email: string | null
+  specialty: string | null
   rsvpStatus: string
   isVip: boolean
   vipLevel: string | null
@@ -81,7 +82,22 @@ export default function AdminPage() {
   const [dashboardLoading, setDashboardLoading] = useState(false)
 
   const [search, setSearch] = useState('')
+  const [specialtyFilter, setSpecialtyFilter] = useState('')
   const [checkingInId, setCheckingInId] = useState<number | null>(null)
+  const [updatingSeatId, setUpdatingSeatId] =
+  useState<number | null>(null)
+
+  const [editingSeatGuest, setEditingSeatGuest] =
+  useState<AdminGuest | null>(null)
+
+const [editTableNumber, setEditTableNumber] =
+  useState('')
+
+const [editSeatNumber, setEditSeatNumber] =
+  useState('')
+
+const [seatEditError, setSeatEditError] =
+  useState('')
   const [actionError, setActionError] = useState('')
     const [updatingGuestId, setUpdatingGuestId] =
     useState<number | null>(null)
@@ -172,7 +188,10 @@ const [tableDetailsLoading, setTableDetailsLoading] =
     }
   }
 
-  const loadDashboard = async (query = '') => {
+  const loadDashboard = async (
+    query = '',
+    selectedSpecialty = specialtyFilter
+  ) => {
     setDashboardLoading(true)
     setActionError('')
 
@@ -181,6 +200,10 @@ const [tableDetailsLoading, setTableDetailsLoading] =
 
       if (query.trim()) {
         params.set('q', query.trim())
+      }
+
+      if (selectedSpecialty) {
+        params.set('specialty', selectedSpecialty)
       }
 
       const url =
@@ -426,6 +449,11 @@ const autoAssignTables = async () => {
     await loadDashboard('')
   }
 
+  const changeSpecialtyFilter = async (value: string) => {
+    setSpecialtyFilter(value)
+    await loadDashboard(search, value)
+  }
+
   const checkInGuest = async (guest: AdminGuest) => {
     if (guest.checkedIn) {
       return
@@ -631,9 +659,94 @@ await Promise.all([
       </main>
     )
   }
+ const openSeatEditor = (guest: AdminGuest) => {
+  setEditingSeatGuest(guest)
 
+  setEditTableNumber(
+    guest.tableNumber?.toString() || ''
+  )
 
-  const toggleVip = async (guest: AdminGuest) => {
+  setEditSeatNumber(
+    guest.seatNumber?.toString() || ''
+  )
+
+  setSeatEditError('')
+}
+
+const saveGuestSeat = async (
+  e: FormEvent<HTMLFormElement>
+) => {
+  e.preventDefault()
+
+  if (!editingSeatGuest) {
+    return
+  }
+
+  const tableNumber = Number(editTableNumber)
+  const seatNumber = Number(editSeatNumber)
+
+  if (!editTableNumber) {
+    setSeatEditError('Please select a table.')
+    return
+  }
+
+  if (!editSeatNumber) {
+    setSeatEditError('Please select a seat.')
+    return
+  }
+
+  setUpdatingSeatId(editingSeatGuest.id)
+  setSeatEditError('')
+
+  try {
+    const response = await fetch(
+      '/api/admin/guest/seat',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          guestId: editingSeatGuest.id,
+          tableNumber,
+          seatNumber,
+        }),
+      }
+    )
+
+    const data = await response.json()
+
+    if (response.status === 401) {
+      setAuthenticated(false)
+      return
+    }
+
+    if (!response.ok) {
+      setSeatEditError(
+        data.error || 'Unable to update guest seat.'
+      )
+      return
+    }
+
+    setEditingSeatGuest(null)
+
+    await Promise.all([
+      loadDashboard(search, specialtyFilter),
+      loadTables(),
+    ])
+
+  } catch (error) {
+    console.error(error)
+
+    setSeatEditError(
+      'Unable to update guest seat.'
+    )
+  } finally {
+    setUpdatingSeatId(null)
+  }
+}
+const toggleVip = async (guest: AdminGuest) => {
   setUpdatingGuestId(guest.id)
   setActionError('')
 
@@ -655,14 +768,24 @@ await Promise.all([
 
     const data = await response.json()
 
+    if (response.status === 401) {
+      setAuthenticated(false)
+      return
+    }
+
     if (!response.ok) {
       setActionError(
-        data.error || 'Unable to update VIP status.'
+        data.error ||
+          'Unable to update VIP status.'
       )
       return
     }
 
-    await loadDashboard(search)
+    await loadDashboard(
+      search,
+      specialtyFilter
+    )
+
   } catch (error) {
     console.error(error)
 
@@ -799,7 +922,7 @@ await Promise.all([
 
               <form
                 onSubmit={searchGuests}
-                className="flex w-full gap-2 lg:max-w-lg"
+                className="flex w-full flex-col gap-2 sm:flex-row lg:max-w-3xl"
               >
 
                 <div className="relative flex-1">
@@ -814,11 +937,28 @@ await Promise.all([
                     onChange={(e) =>
                       setSearch(e.target.value)
                     }
-                    placeholder="Name, phone, email or invitation ID"
+                    placeholder="Name, phone, email, specialty or invitation ID"
                     className="w-full rounded-xl border border-neutral-300 py-3 pl-10 pr-4 text-sm outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
                   />
 
                 </div>
+
+                <select
+                  value={specialtyFilter}
+                  onChange={(e) =>
+                    changeSpecialtyFilter(e.target.value)
+                  }
+                  className="rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
+                >
+                  <option value="">All specialties</option>
+                  <option value="Influencer">Influencer</option>
+                  <option value="Nutritionist">Nutritionist</option>
+                  <option value="Orthopedics">Orthopedics</option>
+                  <option value="Internist">Internist</option>                  
+                  <option value="Gynecologist">Gynecologist</option>
+                  <option value="Dermatologist">Dermatologist</option>
+                  <option value="Pharmacist">Pharmacist</option>
+                </select>
 
                 <button
                   type="submit"
@@ -849,22 +989,34 @@ await Promise.all([
 
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-hidden">
 
-        <table className="w-full min-w-[1250px]">
+              <table className="w-full table-fixed">
 
+                <colgroup>
+                  <col className="w-[9%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[15%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[6%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[11%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[23%]" />
+                </colgroup>
 
               <thead className="bg-neutral-50 text-left text-xs uppercase tracking-wider text-neutral-500">
 
             <tr>
-            <th className="px-6 py-4">Guest</th>
-            <th className="px-6 py-4">Invitation</th>
-            <th className="px-6 py-4">Contact</th>
-            <th className="px-6 py-4">Type</th>
-            <th className="px-6 py-4">RSVP</th>
-            <th className="px-6 py-4">Table / Seat</th>
-            <th className="px-6 py-4">Check-in</th>
-            <th className="min-w-[330px] px-6 py-4">Action</th>
+            <th className="px-3 py-4">Guest</th>
+            <th className="px-3 py-4">Invitation</th>
+            <th className="px-3 py-4">Contact</th>
+            <th className="px-3 py-4">Specialty</th>
+            <th className="px-3 py-4">Type</th>
+            <th className="px-3 py-4">RSVP</th>
+            <th className="px-3 py-4">Table / Seat</th>
+            <th className="px-3 py-4">Check-in</th>
+            <th className="px-2 py-4">Action</th>
             </tr>
 
               </thead>
@@ -875,7 +1027,7 @@ await Promise.all([
 
                   <tr>
                     <td
-                      colSpan={8}
+                      colSpan={9}
                       className="px-6 py-16 text-center"
                     >
                       <LoaderCircle
@@ -893,7 +1045,7 @@ await Promise.all([
 
                   <tr>
                     <td
-                      colSpan={8}
+                      colSpan={9}
                       className="px-6 py-16 text-center text-neutral-500"
                     >
                       No guests found.
@@ -940,6 +1092,12 @@ guests.map((guest) => (
     </td>
 
 
+    {/* SPECIALTY */}
+    <td className="px-6 py-4 text-sm text-neutral-700">
+      {guest.specialty || '—'}
+    </td>
+
+
     {/* TYPE */}
     <td className="px-6 py-4">
 
@@ -966,34 +1124,54 @@ guests.map((guest) => (
     </td>
 
 
-    {/* TABLE / SEAT */}
+{/* TABLE / SEAT */}
 <td className="px-6 py-4">
-
   {guest.tableNumber !== null &&
   guest.seatNumber !== null ? (
-
     <div>
-
       <span className="block text-sm font-semibold text-neutral-900">
-        Table {String(
-          guest.tableNumber
-        ).padStart(2, '0')}
+        Table{' '}
+        {String(guest.tableNumber).padStart(2, '0')}
       </span>
 
       <span className="mt-1 block text-xs text-neutral-500">
         Seat {guest.seatNumber}
       </span>
-
     </div>
-
   ) : (
-
     <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-500">
       Not assigned
     </span>
-
   )}
 
+  <button
+    type="button"
+    disabled={updatingSeatId === guest.id}
+    onClick={() => openSeatEditor(guest)}
+    className="
+      mt-3
+      block
+      whitespace-nowrap
+      rounded-lg
+      bg-blue-50
+      px-3 py-1.5
+      text-xs
+      font-semibold
+      text-blue-600
+      transition
+      hover:bg-blue-600
+      hover:text-white
+      disabled:cursor-not-allowed
+      disabled:opacity-50
+    "
+  >
+    {updatingSeatId === guest.id
+      ? 'UPDATING...'
+      : guest.tableNumber !== null &&
+          guest.seatNumber !== null
+        ? 'CHANGE SEAT'
+        : 'ASSIGN SEAT'}
+  </button>
 </td>
 
 
@@ -1022,8 +1200,8 @@ guests.map((guest) => (
 
 
   {/* ACTION */}
-<td className="min-w-[330px] px-6 py-4">
-  <div className="flex flex-nowrap items-center gap-2">
+<td className="min-w-[280px] px-4 py-4">
+  <div className="flex flex-wrap items-center gap-2">
 
     {/* VIP */}
     <button
@@ -1559,6 +1737,195 @@ guests.map((guest) => (
 )}
 
       </div>
+
+
+      {editingSeatGuest && (
+  <div
+    className="
+      fixed inset-0 z-[60]
+      flex items-center justify-center
+      bg-black/50
+      px-4
+      backdrop-blur-sm
+    "
+    onClick={() => {
+      if (!updatingSeatId) {
+        setEditingSeatGuest(null)
+      }
+    }}
+  >
+    <form
+      onSubmit={saveGuestSeat}
+      onClick={(e) => e.stopPropagation()}
+      className="
+        w-full max-w-md
+        rounded-3xl
+        bg-white
+        p-6
+        shadow-2xl
+      "
+    >
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-xs font-semibold tracking-[0.2em] text-orange-500">
+            SEAT MANAGEMENT
+          </p>
+
+          <h2 className="mt-2 text-2xl font-semibold text-neutral-900">
+            Assign Table & Seat
+          </h2>
+
+          <p className="mt-1 text-sm text-neutral-500">
+            {editingSeatGuest.fullName}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          disabled={Boolean(updatingSeatId)}
+          onClick={() => setEditingSeatGuest(null)}
+          className="
+            rounded-xl p-2
+            text-neutral-400
+            transition
+            hover:bg-neutral-100
+            hover:text-neutral-900
+          "
+        >
+          <X size={21} />
+        </button>
+      </div>
+
+      <div className="mt-6 grid grid-cols-2 gap-4">
+        <label className="block">
+          <span className="mb-2 block text-sm font-medium text-neutral-700">
+            Table
+          </span>
+
+          <select
+            value={editTableNumber}
+            onChange={(e) => {
+              setEditTableNumber(e.target.value)
+              setSeatEditError('')
+            }}
+            className="
+              w-full rounded-xl
+              border border-neutral-300
+              bg-white px-4 py-3
+              text-sm text-neutral-900
+              outline-none
+              focus:border-orange-500
+              focus:ring-4
+              focus:ring-orange-500/10
+            "
+          >
+            <option value="">Select table</option>
+
+            {Array.from(
+              { length: 95 },
+              (_, index) => index + 1
+            ).map((tableNumber) => (
+              <option
+                key={tableNumber}
+                value={tableNumber}
+              >
+                Table {String(tableNumber).padStart(2, '0')}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block text-sm font-medium text-neutral-700">
+            Seat
+          </span>
+
+          <select
+            value={editSeatNumber}
+            onChange={(e) => {
+              setEditSeatNumber(e.target.value)
+              setSeatEditError('')
+            }}
+            className="
+              w-full rounded-xl
+              border border-neutral-300
+              bg-white px-4 py-3
+              text-sm text-neutral-900
+              outline-none
+              focus:border-orange-500
+              focus:ring-4
+              focus:ring-orange-500/10
+            "
+          >
+            <option value="">Select seat</option>
+
+            {Array.from(
+              { length: 7 },
+              (_, index) => index + 1
+            ).map((seatNumber) => (
+              <option
+                key={seatNumber}
+                value={seatNumber}
+              >
+                Seat {seatNumber}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {seatEditError && (
+        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+          {seatEditError}
+        </div>
+      )}
+
+      <div className="mt-6 flex gap-3">
+        <button
+          type="button"
+          disabled={Boolean(updatingSeatId)}
+          onClick={() => setEditingSeatGuest(null)}
+          className="
+            flex-1 rounded-xl
+            border border-neutral-300
+            px-4 py-3
+            text-sm font-semibold
+            text-neutral-700
+            transition
+            hover:bg-neutral-100
+            disabled:opacity-50
+          "
+        >
+          CANCEL
+        </button>
+
+        <button
+          type="submit"
+          disabled={
+            Boolean(updatingSeatId) ||
+            !editTableNumber ||
+            !editSeatNumber
+          }
+          className="
+            flex-1 rounded-xl
+            bg-neutral-950
+            px-4 py-3
+            text-sm font-semibold
+            text-white
+            transition
+            hover:bg-orange-500
+            disabled:cursor-not-allowed
+            disabled:opacity-50
+          "
+        >
+          {updatingSeatId
+            ? 'SAVING...'
+            : 'SAVE SEAT'}
+        </button>
+      </div>
+    </form>
+  </div>
+)}
 
     </main>
   )

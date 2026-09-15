@@ -20,7 +20,59 @@ interface RSVPBody {
   name?: string
   phone?: string
   email?: string
+  specialty?: string
+  governorate?: string
+  invitedBy?: string
 }
+
+const ALLOWED_SPECIALTIES = new Set([
+  'Influencer',
+  'Nutritionist',
+  'Orthopedics',
+  'Internist',
+  'Gynecologist',
+  'Dermatologist',
+  'Pharmacist',
+])
+
+
+const ALLOWED_GOVERNORATES = new Set([
+  'Alexandria',
+  'Aswan',
+  'Asyut',
+  'Beheira',
+  'Beni Suef',
+  'Cairo',
+  'Dakahlia',
+  'Damietta',
+  'Fayoum',
+  'Gharbia',
+  'Giza',
+  'Ismailia',
+  'Kafr El Sheikh',
+  'Luxor',
+  'Matrouh',
+  'Minya',
+  'Monufia',
+  'New Valley',
+  'North Sinai',
+  'Port Said',
+  'Qalyubia',
+  'Qena',
+  'Red Sea',
+  'Sharqia',
+  'Sohag',
+  'South Sinai',
+  'Suez',
+])
+
+const ALLOWED_INVITED_BY = new Set([
+  'Medical Team',
+  'PR Team',
+  'Chain Team',
+  'Sales Team',
+  'E-Commerce Team',
+])
 
 function normalizeEgyptianPhone(phone: string) {
   const cleaned = phone.replace(/[\s-]/g, '')
@@ -359,76 +411,148 @@ export default {
           })
         }
 
-        // =====================================================
-        // NEW GUEST
-        // =====================================================
+const name = body.name?.trim()
+const email = body.email?.trim().toLowerCase()
+const specialty = body.specialty?.trim()
+const governorate = body.governorate?.trim()
+const invitedBy = body.invitedBy?.trim()
 
-        const name = body.name?.trim()
-        const email = body.email?.trim().toLowerCase()
+if (!name) {
+  return Response.json(
+    {
+      success: false,
+      code: 'NAME_REQUIRED',
+      error: 'Full name is required.',
+    },
+    { status: 400 }
+  )
+}
 
-        if (!name) {
-          return Response.json(
-            {
-              success: false,
-              code: 'NAME_REQUIRED',
-              error: 'Full name is required.',
-            },
-            { status: 400 }
-          )
-        }
+if (name.length < 3 || !isValidName(name)) {
+  return Response.json(
+    {
+      success: false,
+      code: 'INVALID_NAME',
+      error: 'Please enter a valid full name.',
+    },
+    { status: 400 }
+  )
+}
 
-        if (name.length < 3 || !isValidName(name)) {
-          return Response.json(
-            {
-              success: false,
-              code: 'INVALID_NAME',
-              error: 'Please enter a valid full name.',
-            },
-            { status: 400 }
-          )
-        }
+if (!email) {
+  return Response.json(
+    {
+      success: false,
+      code: 'EMAIL_REQUIRED',
+      error: 'Email address is required.',
+    },
+    { status: 400 }
+  )
+}
 
-        if (!email) {
-          return Response.json(
-            {
-              success: false,
-              code: 'EMAIL_REQUIRED',
-              error: 'Email address is required.',
-            },
-            { status: 400 }
-          )
-        }
+if (!isValidEmail(email)) {
+  return Response.json(
+    {
+      success: false,
+      code: 'INVALID_EMAIL',
+      error: 'Please enter a valid email address.',
+    },
+    { status: 400 }
+  )
+}
 
-        if (!isValidEmail(email)) {
-          return Response.json(
-            {
-              success: false,
-              code: 'INVALID_EMAIL',
-              error: 'Please enter a valid email address.',
-            },
-            { status: 400 }
-          )
-        }
+if (!specialty) {
+  return Response.json(
+    {
+      success: false,
+      code: 'SPECIALTY_REQUIRED',
+      error: 'Please select your specialty.',
+    },
+    { status: 400 }
+  )
+}
 
-        const qrToken = crypto.randomUUID()
+if (!ALLOWED_SPECIALTIES.has(specialty)) {
+  return Response.json(
+    {
+      success: false,
+      code: 'INVALID_SPECIALTY',
+      error: 'Please select a valid specialty.',
+    },
+    { status: 400 }
+  )
+}
 
-        const result = await env.DB.prepare(`
-          INSERT INTO guests (
-            full_name,
-            phone,
-            email,
-            rsvp_status,
-            qr_token
-          )
-          VALUES (?, ?, ?, 'confirmed', ?)
-        `)
-          .bind(
-            name,
-            phone,
-            email,
-            qrToken
-          )
-          .run()
+if (!governorate) {
+  return Response.json(
+    {
+      success: false,
+      code: 'GOVERNORATE_REQUIRED',
+      error: 'Please select your governorate.',
+    },
+    { status: 400 }
+  )
+}
+
+if (!ALLOWED_GOVERNORATES.has(governorate)) {
+  return Response.json(
+    {
+      success: false,
+      code: 'INVALID_GOVERNORATE',
+      error: 'Please select a valid governorate.',
+    },
+    { status: 400 }
+  )
+}
+
+if (!invitedBy) {
+  return Response.json(
+    {
+      success: false,
+      code: 'INVITED_BY_REQUIRED',
+      error: 'Please select who invited you.',
+    },
+    { status: 400 }
+  )
+}
+
+if (!ALLOWED_INVITED_BY.has(invitedBy)) {
+  return Response.json(
+    {
+      success: false,
+      code: 'INVALID_INVITED_BY',
+      error: 'Please select a valid invitation team.',
+    },
+    { status: 400 }
+  )
+}
+const qrToken = crypto.randomUUID()
+
+const result = await env.DB.prepare(`
+  INSERT INTO guests (
+    full_name,
+    phone,
+    email,
+    specialty,
+    governorate,
+    invited_by,
+    rsvp_status,
+    qr_token
+  )
+  VALUES (?, ?, ?, ?, ?, ?, 'confirmed', ?)
+`)
+  .bind(
+    name,
+    phone,
+    email,
+    specialty,
+    governorate,
+    invitedBy,
+    qrToken
+  )
+  .run()
+
+
 
         const id = Number(result.meta.last_row_id)
 
@@ -493,6 +617,9 @@ export default {
             guest: {
             id,
             fullName: name,
+            specialty,
+            governorate,
+            invitedBy,
             phone,
             email,
             invitationCode,
@@ -547,6 +674,7 @@ if (
         full_name,
         phone,
         email,
+        specialty,
         rsvp_status,
         qr_token,
         is_vip,
@@ -565,6 +693,7 @@ if (
         full_name: string
         phone: string
         email: string | null
+        specialty: string | null
         rsvp_status: string
         qr_token: string
         is_vip: number
@@ -590,6 +719,7 @@ if (
       guest: {
         id: guest.id,
         fullName: guest.full_name,
+        specialty: guest.specialty,
         invitationCode: guest.invitation_code,
         rsvpStatus: guest.rsvp_status,
         isVip: Boolean(guest.is_vip),
@@ -775,6 +905,22 @@ if (
 
   try {
     const q = (url.searchParams.get('q') || '').trim()
+    const specialtyFilter =
+      (url.searchParams.get('specialty') || '').trim()
+
+    if (
+      specialtyFilter &&
+      !ALLOWED_SPECIALTIES.has(specialtyFilter)
+    ) {
+      return Response.json(
+        {
+          success: false,
+          code: 'INVALID_SPECIALTY',
+          error: 'Please select a valid specialty.',
+        },
+        { status: 400 }
+      )
+    }
 
     const stats = await env.DB.prepare(`
       SELECT
@@ -818,7 +964,7 @@ if (
 
     let guests
 
-    if (q) {
+    if (q && specialtyFilter) {
       const search = `%${q}%`
 
       guests = await env.DB.prepare(`
@@ -828,6 +974,49 @@ if (
           full_name,
           phone,
           email,
+          specialty,
+          rsvp_status,
+          is_vip,
+          vip_level,
+          table_number,
+          seat_number,
+          checked_in,
+          checked_in_at,
+          created_at
+        FROM guests
+        WHERE specialty = ?
+          AND (
+            full_name LIKE ?
+            OR phone LIKE ?
+            OR email LIKE ?
+            OR invitation_code LIKE ?
+            OR specialty LIKE ?
+          )
+        ORDER BY
+          is_vip DESC,
+          full_name ASC
+        LIMIT 200
+      `)
+        .bind(
+          specialtyFilter,
+          search,
+          search,
+          search,
+          search,
+          search
+        )
+        .all()
+    } else if (q) {
+      const search = `%${q}%`
+
+      guests = await env.DB.prepare(`
+        SELECT
+          id,
+          invitation_code,
+          full_name,
+          phone,
+          email,
+          specialty,
           rsvp_status,
           is_vip,
           vip_level,
@@ -842,6 +1031,7 @@ if (
           OR phone LIKE ?
           OR email LIKE ?
           OR invitation_code LIKE ?
+          OR specialty LIKE ?
         ORDER BY
           is_vip DESC,
           full_name ASC
@@ -851,8 +1041,35 @@ if (
           search,
           search,
           search,
+          search,
           search
         )
+        .all()
+    } else if (specialtyFilter) {
+      guests = await env.DB.prepare(`
+        SELECT
+          id,
+          invitation_code,
+          full_name,
+          phone,
+          email,
+          specialty,
+          rsvp_status,
+          is_vip,
+          vip_level,
+          table_number,
+          seat_number,
+          checked_in,
+          checked_in_at,
+          created_at
+        FROM guests
+        WHERE specialty = ?
+        ORDER BY
+          is_vip DESC,
+          full_name ASC
+        LIMIT 1000
+      `)
+        .bind(specialtyFilter)
         .all()
     } else {
       guests = await env.DB.prepare(`
@@ -862,6 +1079,7 @@ if (
           full_name,
           phone,
           email,
+          specialty,
           rsvp_status,
           is_vip,
           vip_level,
@@ -904,6 +1122,7 @@ if (
         fullName: guest.full_name,
         phone: guest.phone,
         email: guest.email,
+        specialty: guest.specialty,
         rsvpStatus: guest.rsvp_status,
         isVip: Boolean(guest.is_vip),
         vipLevel: guest.vip_level,
@@ -1159,6 +1378,266 @@ if (
       { status: 500 }
     )
   }
+}
+
+// =========================================================
+// ADMIN UPDATE GUEST SEAT
+// =========================================================
+
+if (
+  request.method === 'POST' &&
+  url.pathname === '/api/admin/guest/seat'
+) {
+  const authenticated =
+    await isAdminAuthenticated(request, env)
+
+  if (!authenticated) {
+    return Response.json(
+      {
+        success: false,
+        error: 'Unauthorized.',
+      },
+      { status: 401 }
+    )
+  }
+
+  try {
+    const body = await request.json<{
+      guestId?: number
+      tableNumber?: number
+      seatNumber?: number
+    }>()
+
+    const guestId = Number(body.guestId)
+    const tableNumber = Number(body.tableNumber)
+    const seatNumber = Number(body.seatNumber)
+
+    if (
+      !Number.isInteger(guestId) ||
+      guestId <= 0
+    ) {
+      return Response.json(
+        {
+          success: false,
+          code: 'INVALID_GUEST_ID',
+          error: 'Invalid guest ID.',
+        },
+        { status: 400 }
+      )
+    }
+
+    if (
+      !Number.isInteger(tableNumber) ||
+      tableNumber < 1 ||
+      tableNumber > 95
+    ) {
+      return Response.json(
+        {
+          success: false,
+          code: 'INVALID_TABLE_NUMBER',
+          error: 'Table number must be between 1 and 95.',
+        },
+        { status: 400 }
+      )
+    }
+
+    if (
+      !Number.isInteger(seatNumber) ||
+      seatNumber < 1 ||
+      seatNumber > 7
+    ) {
+      return Response.json(
+        {
+          success: false,
+          code: 'INVALID_SEAT_NUMBER',
+          error: 'Seat number must be between 1 and 7.',
+        },
+        { status: 400 }
+      )
+    }
+
+    const guest = await env.DB.prepare(`
+      SELECT
+        id,
+        full_name,
+        rsvp_status
+      FROM guests
+      WHERE id = ?
+      LIMIT 1
+    `)
+      .bind(guestId)
+      .first<{
+        id: number
+        full_name: string
+        rsvp_status: string
+      }>()
+
+    if (!guest) {
+      return Response.json(
+        {
+          success: false,
+          code: 'GUEST_NOT_FOUND',
+          error: 'Guest not found.',
+        },
+        { status: 404 }
+      )
+    }
+
+    if (guest.rsvp_status !== 'confirmed') {
+      return Response.json(
+        {
+          success: false,
+          code: 'GUEST_NOT_CONFIRMED',
+          error: 'Only confirmed guests can be assigned a seat.',
+        },
+        { status: 409 }
+      )
+    }
+
+    const table = await env.DB.prepare(`
+      SELECT
+        table_number,
+        capacity,
+        is_active
+      FROM event_tables
+      WHERE table_number = ?
+      LIMIT 1
+    `)
+      .bind(tableNumber)
+      .first<{
+        table_number: number
+        capacity: number
+        is_active: number
+      }>()
+
+    if (!table) {
+      return Response.json(
+        {
+          success: false,
+          code: 'TABLE_NOT_FOUND',
+          error: 'Table not found.',
+        },
+        { status: 404 }
+      )
+    }
+
+    if (!table.is_active) {
+      return Response.json(
+        {
+          success: false,
+          code: 'TABLE_INACTIVE',
+          error: 'This table is not active.',
+        },
+        { status: 409 }
+      )
+    }
+
+    if (seatNumber > table.capacity) {
+      return Response.json(
+        {
+          success: false,
+          code: 'SEAT_OUTSIDE_CAPACITY',
+          error: `This table has only ${table.capacity} seats.`,
+        },
+        { status: 400 }
+      )
+    }
+
+    const occupiedSeat = await env.DB.prepare(`
+      SELECT
+        id,
+        full_name
+      FROM guests
+      WHERE table_number = ?
+        AND seat_number = ?
+        AND id != ?
+      LIMIT 1
+    `)
+      .bind(
+        tableNumber,
+        seatNumber,
+        guestId
+      )
+      .first<{
+        id: number
+        full_name: string
+      }>()
+
+    if (occupiedSeat) {
+      return Response.json(
+        {
+          success: false,
+          code: 'SEAT_ALREADY_OCCUPIED',
+          error:
+            `Seat ${seatNumber} at Table ${tableNumber} ` +
+            `is already assigned to ${occupiedSeat.full_name}.`,
+        },
+        { status: 409 }
+      )
+    }
+
+    await env.DB.prepare(`
+      UPDATE guests
+      SET
+        table_number = ?,
+        seat_number = ?,
+        table_locked = 1,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `)
+      .bind(
+        tableNumber,
+        seatNumber,
+        guestId
+      )
+      .run()
+
+    return Response.json({
+      success: true,
+      guest: {
+        id: guestId,
+        tableNumber,
+        seatNumber,
+        tableLocked: true,
+      },
+    })
+
+} catch (error) {
+  const errorMessage =
+    error instanceof Error
+      ? error.message
+      : String(error)
+
+  if (
+    errorMessage.includes(
+      'UNIQUE constraint failed'
+    )
+  ) {
+    return Response.json(
+      {
+        success: false,
+        code: 'SEAT_ALREADY_OCCUPIED',
+        error:
+          'This seat was just assigned to another guest. ' +
+          'Please select another seat.',
+      },
+      { status: 409 }
+    )
+  }
+
+  console.error(
+    'GUEST SEAT UPDATE ERROR:',
+    error
+  )
+
+  return Response.json(
+    {
+      success: false,
+      error: 'Unable to update guest seat.',
+    },
+    { status: 500 }
+  )
+}
 }
 
 
