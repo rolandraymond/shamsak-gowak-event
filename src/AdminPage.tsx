@@ -951,7 +951,7 @@ await Promise.all([
                   className="rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
                 >
                   <option value="">All specialties</option>
-                  <option value="Influencer">Influencer</option>
+                  <option value="Health Advocates">Health Advocates</option>
                   <option value="Nutritionist">Nutritionist</option>
                   <option value="Orthopedics">Orthopedics</option>
                   <option value="Internist">Internist</option>                  

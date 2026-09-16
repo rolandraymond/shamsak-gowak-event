@@ -1,5 +1,6 @@
 import { sendConfirmationEmail } from './email'
 import {
+  assignGuestToTable,
   autoAssignTables,
   getTablesOverview,
   setTableType,
@@ -26,9 +27,9 @@ interface RSVPBody {
 }
 
 const ALLOWED_SPECIALTIES = new Set([
-  'Influencer',
+  'Health Advocates',
   'Nutritionist',
-  'Orthopedics',
+  'Orthopedic',
   'Internist',
   'Gynecologist',
   'Dermatologist',
@@ -352,6 +353,45 @@ export default {
             .run()
 
 
+let tableNumber =
+  existingGuest.table_number
+
+let seatNumber =
+  existingGuest.seat_number
+
+if (
+  tableNumber === null ||
+  seatNumber === null
+) {
+  try {
+    const seatAssignment =
+      await assignGuestToTable(
+        env,
+        existingGuest.id
+      )
+
+    if (seatAssignment.success) {
+      tableNumber =
+        seatAssignment.tableNumber
+
+      seatNumber =
+        seatAssignment.seatNumber
+    } else {
+      console.warn(
+        `AUTO SEAT FAILED: Guest ${existingGuest.id}`,
+        seatAssignment.code,
+        seatAssignment.error
+      )
+    }
+  } catch (error) {
+    console.error(
+      'AUTO SEAT ERROR:',
+      error
+    )
+  }
+}
+
+
             let emailStatus = 'skipped'
 
             if (existingGuest.email) {
@@ -405,8 +445,8 @@ export default {
               qrToken,
               rsvpStatus: 'confirmed',
               isVip: Boolean(existingGuest.is_vip),
-              tableNumber: existingGuest.table_number,
-              seatNumber: existingGuest.seat_number,
+              tableNumber,
+              seatNumber,
             },
           })
         }
@@ -572,6 +612,40 @@ const result = await env.DB.prepare(`
           )
           .run()
 
+          let tableNumber: number | null = null
+          let seatNumber: number | null = null
+
+          try {
+            const seatAssignment =
+              await assignGuestToTable(
+                env,
+                id
+              )
+
+            if (seatAssignment.success) {
+              tableNumber =
+                seatAssignment.tableNumber
+
+              seatNumber =
+                seatAssignment.seatNumber
+
+              console.log(
+                `AUTO SEAT SUCCESS: Guest ${id} -> Table ${tableNumber}, Seat ${seatNumber}`
+              )
+            } else {
+              console.warn(
+                `AUTO SEAT FAILED: Guest ${id}`,
+                seatAssignment.code,
+                seatAssignment.error
+              )
+            }
+          } catch (error) {
+            console.error(
+              'AUTO SEAT ERROR:',
+              error
+            )
+}
+
           let emailStatus = 'failed'
 
         try {
@@ -626,8 +700,8 @@ const result = await env.DB.prepare(`
             qrToken,
             rsvpStatus: 'confirmed',
             isVip: false,
-            tableNumber: null,
-            seatNumber: null,
+            tableNumber,
+            seatNumber,
             },
         },
         { status: 201 }

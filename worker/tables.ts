@@ -503,3 +503,209 @@ export async function autoAssignTables(
       sortedGroups.length,
   }
 }
+
+
+type AutoSeatEnv = {
+  DB: D1Database
+}
+
+export async function assignGuestToTable(
+  env: AutoSeatEnv,
+  guestId: number
+): Promise<
+  | {
+      success: true
+      tableNumber: number
+      seatNumber: number
+      alreadyAssigned?: boolean
+    }
+  | {
+      success: false
+      code: string
+      error: string
+    }
+> {
+  // ---------------------------------------------------------
+  // Get guest
+  // ---------------------------------------------------------
+
+  const guest = await env.DB.prepare(`
+    SELECT
+      id,
+      is_vip,
+      rsvp_status,
+      table_number,
+      seat_number,
+      table_locked
+    FROM guests
+    WHERE id = ?
+    LIMIT 1
+  `)
+    .bind(guestId)
+    .first<{
+      id: number
+      is_vip: number
+      rsvp_status: string
+      table_number: number | null
+      seat_number: number | null
+      table_locked: number
+    }>()
+
+  if (!guest) {
+    return {
+      success: false,
+      code: 'GUEST_NOT_FOUND',
+      error: 'Guest not found.',
+    }
+  }
+
+  // ---------------------------------------------------------
+  // Only confirmed guests get seats
+  // ---------------------------------------------------------
+
+  if (guest.rsvp_status !== 'confirmed') {
+    return {
+      success: false,
+      code: 'GUEST_NOT_CONFIRMED',
+      error: 'Guest is not confirmed.',
+    }
+  }
+
+  // ---------------------------------------------------------
+  // Already has a complete seat assignment
+  // Do NOT change it
+  // ---------------------------------------------------------
+
+  if (
+    guest.table_number !== null &&
+    guest.seat_number !== null
+  ) {
+    return {
+      success: true,
+      tableNumber: guest.table_number,
+      seatNumber: guest.seat_number,
+      alreadyAssigned: true,
+    }
+  }
+
+  // Protect against inconsistent data
+  if (
+    (guest.table_number !== null &&
+      guest.seat_number === null) ||
+    (guest.table_number === null &&
+      guest.seat_number !== null)
+  ) {
+    return {
+      success: false,
+      code: 'PARTIAL_SEAT_ASSIGNMENT',
+      error: 'Guest has an incomplete seat assignment.',
+    }
+  }
+
+  const tableType =
+    guest.is_vip === 1 ? 'vip' : 'regular'
+
+  // ---------------------------------------------------------
+  // Atomically find first available seat + assign it
+  //
+  // Example:
+  // Table 1 seats 1-7
+  // then Table 2 seats 1-7
+  // etc.
+  //
+  // VIP guests only go to VIP tables.
+  // Regular guests only go to regular tables.
+  // ---------------------------------------------------------
+
+  const assigned = await env.DB.prepare(`
+    WITH RECURSIVE seat_numbers(seat_number) AS (
+      SELECT 1
+
+      UNION ALL
+
+      SELECT seat_number + 1
+      FROM seat_numbers
+      WHERE seat_number < 7
+    ),
+
+    chosen_seat AS (
+      SELECT
+        t.table_number,
+        s.seat_number
+
+      FROM event_tables t
+
+      JOIN seat_numbers s
+        ON s.seat_number <= t.capacity
+
+      LEFT JOIN guests occupied
+        ON occupied.table_number = t.table_number
+        AND occupied.seat_number = s.seat_number
+
+      WHERE
+        t.is_active = 1
+        AND t.table_type = ?
+        AND occupied.id IS NULL
+
+      ORDER BY
+        t.table_number ASC,
+        s.seat_number ASC
+
+      LIMIT 1
+    )
+
+    UPDATE guests
+
+    SET
+      table_number = (
+        SELECT table_number
+        FROM chosen_seat
+      ),
+
+      seat_number = (
+        SELECT seat_number
+        FROM chosen_seat
+      ),
+
+      updated_at = CURRENT_TIMESTAMP
+
+    WHERE
+      id = ?
+      AND rsvp_status = 'confirmed'
+      AND table_number IS NULL
+      AND seat_number IS NULL
+      AND EXISTS (
+        SELECT 1
+        FROM chosen_seat
+      )
+
+    RETURNING
+      table_number,
+      seat_number
+  `)
+    .bind(
+      tableType,
+      guestId
+    )
+    .first<{
+      table_number: number
+      seat_number: number
+    }>()
+
+  if (!assigned) {
+    return {
+      success: false,
+      code: 'NO_AVAILABLE_SEAT',
+      error:
+        tableType === 'vip'
+          ? 'No VIP seats are currently available.'
+          : 'No regular seats are currently available.',
+    }
+  }
+
+  return {
+    success: true,
+    tableNumber: assigned.table_number,
+    seatNumber: assigned.seat_number,
+  }
+}

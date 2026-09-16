@@ -23,6 +23,7 @@
     /* 0 2px 0 rgba(0, 0, 0, 0.12),
     0 4px 8px rgba(0, 0, 0, 0.08); */
 }
+
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body { margin: 0; background: var(--cream); }
@@ -108,11 +109,7 @@ button, input { font: inherit; }
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 28px;
 
-  background: linear-gradient(
-    145deg,
-    #ffd700,
-    #e5a01a
-  );
+  background: #956c38;
 
   color: #000;
 }
@@ -213,12 +210,50 @@ footer { background: #171512; color: #fff; padding: 42px 0; }
   .facts-grid {
     grid-template-columns: 1fr;
   }
-
+  .shamsak-gowak-text {
+  font-size: clamp(40px, 12vw, 58px);
+  transform: none;
+}
   .facts-grid article:nth-child(3) h3 {
     white-space: normal;
     font-size: 34px;
   }
-  .launch-grid, .rsvp-grid { gap: 48px; }
+.launch-grid,
+.rsvp-grid {
+  grid-template-columns: 1fr;
+  gap: 36px;
+}
+
+.rsvp-section {
+  padding: 72px 0;
+}
+
+.rsvp-copy h2 {
+  font-size: clamp(40px, 12vw, 56px);
+  line-height: 1.1;
+}
+
+.rsvp-copy p {
+  max-width: 100%;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.rsvp-card {
+  width: 100%;
+  padding: 26px 20px;
+  border-radius: 24px;
+}
+
+.form-head h3 {
+  font-size: 32px;
+  line-height: 1.1;
+}
+
+.shamsak-gowak-text {
+  font-size: clamp(40px, 12vw, 58px);
+  transform: none;
+}
 }
 
 @media (max-width: 520px) {
@@ -273,13 +308,7 @@ footer { background: #171512; color: #fff; padding: 42px 0; }
   filter: blur(1px);
 }
 
-.hero-portrait.special-guest-blur {
-  filter:
-    sepia(.08)
-    blur(14px)
-    brightness(.5)
-    contrast(1.25);
-}
+
 
 .hero-portrait-wrap::after {
   content: '';
@@ -319,7 +348,27 @@ footer { background: #171512; color: #fff; padding: 42px 0; }
   border: 1px solid rgba(23,21,18,.12);
   backdrop-filter: blur(10px);
 }
+.portrait-label {
+  display: grid;
+  gap: 3px;
+  text-align: left;
+}
 
+.portrait-label strong {
+  color: #171512;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.portrait-label small {
+  color: #8d5f1d;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
 .hero-copy {
   max-width: 710px;
 }
@@ -363,6 +412,22 @@ footer { background: #171512; color: #fff; padding: 42px 0; }
   color: #6c6257;
   font-size: 15px;
   letter-spacing: .03em;
+}
+
+
+.launch-lockup > .sponsor-text {
+  margin-top: 32px;
+  margin-bottom: 32px;
+
+  color: #6c6257;
+  font-size: 12px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.launch-lockup > .sponsor-text strong {
+  color: #171512;
+  font-weight: 600;
 }
 
 .hero-campaign-logo {

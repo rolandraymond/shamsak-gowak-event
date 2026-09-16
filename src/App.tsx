@@ -65,6 +65,9 @@ const [registrationErrors, setRegistrationErrors] = useState({
 
 })
 
+const [privacyAccepted, setPrivacyAccepted] =
+  useState(false)
+
 const lookupInvitation = async (
   e: FormEvent<HTMLFormElement>
 ) => {
@@ -345,7 +348,7 @@ const resetInvitation = () => {
   setGovernorate('')
   setInvitedBy('')
   setConsentAccepted(false)
-
+  setPrivacyAccepted(false)
   setIsNewGuest(false)
 
   setPhoneError('')
@@ -404,17 +407,17 @@ if (window.location.pathname === '/check-in') {
             >
               <div className="portrait-sun" />
 
-              <img
-                src="/assets/ahmed-el-ghandour2.png"
-                alt="SPECIAL GUEST"
-                className="
-                  hero-portrait
-                  special-guest-blur
-                  scale-105
-                  select-none
-                "
-              />
-              <span className="portrait-label">SPECIAL GUEST</span>
+          <img
+            src="/assets/ahmed-el-ghandour2.png"
+            alt="Ahmed El-Ghandour — Da7ee7"
+            className="
+              hero-portrait
+              scale-105
+              select-none
+            "
+          />
+
+
             </motion.div>
 
             <div className="hero-copy">
@@ -430,48 +433,46 @@ if (window.location.pathname === '/check-in') {
               </motion.div>
 
                 <motion.div
-                  className="guest-heading "
+                  className="guest-heading"
                   initial={{ opacity: 0, y: 24 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.85, delay: 0.15 }}
+                  transition={{
+                    duration: 0.85,
+                    delay: 0.15,
+                  }}
                 >
-                  <span className="text-xs font-semibold tracking-[0.28em] uppercase text-black/60">
+                  <span className="text-xs font-semibold uppercase tracking-[0.28em] text-black/60">
                     SPECIAL GUEST
                   </span>
 
-                  <h1 className="mt-3 text-4xl font-semibold text-black md:text-6xl">
-                    Guess the Guest
-                  </h1>
-
-                  <p className="mt-3 text-sm tracking-[0.18em] uppercase text-black/60">
-                    Can you guess who’s joining us?
-                  </p>
+                  <div className="mt-3 w-fit">
+                    <h1 className="text-4xl font-semibold text-black md:text-6xl">
+                      Ahmed El-Ghandour
+                    </h1>
+                  </div>
                 </motion.div>
 
-              <motion.div
-                className="launch-lockup"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: .8, delay: .3 }}
-              >
-                <p>A special appearance at the launch of</p>
-                <img src="/assets/campaign-logo.png" alt="شمسك جواك" className="campaign-logo hero-campaign-logo" />
-              </motion.div>
+                <motion.div
+                  className="launch-lockup"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: .8, delay: .3 }}
+                >
+                  <p>A special appearance at the launch of</p>
 
-              <motion.div
-                className="hero-countdown"
-                aria-label="Countdown to event"
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: .8, delay: .45 }}
-              >
-                {Object.entries(countdown).map(([label, value]) => (
-                  <div key={label}>
-                    <strong>{String(value).padStart(2, '0')}</strong>
-                    <span>{label}</span>
-                  </div>
-                ))}
-              </motion.div>
+                  <img
+                    src="/assets/campaign-logo.png"
+                    alt="شمسك جواك"
+                    className="campaign-logo hero-campaign-logo"
+                  />
+
+                  <p className="sponsor-text">
+                    Sponsored by{' '}
+                    <strong>
+                      Limitless Ossofortin.
+                    </strong>
+                  </p>
+                </motion.div>
 
               <motion.div
                 className="event-meta hero-event-meta"
@@ -522,45 +523,39 @@ if (window.location.pathname === '/check-in') {
 <section className="facts-section">
   <div className="shell">
 
-<div className="facts-grid">
+    <div className="facts-grid">
 
       <article>
-      <span className="fact-no">01</span>
+        <span className="fact-no">01</span>
 
-      <h3>Look Around</h3>
+        <h3>Look Around</h3>
 
-      <p>
-        How much sunlight surrounds us every day?
-        We see it, feel it, and live with it. But is sunlight alone
-        enough to give our bodies the Vitamin D they need?
-      </p>
-    </article>
+        <p>
+          There’s sunlight surrounding us every day and everywhere.
+        </p>
+      </article>
 
-    <article>
-      <span className="fact-no">02</span>
+      <article>
+        <span className="fact-no">02</span>
 
-      <h3>Look Within</h3>
+        <h3>Look Within</h3>
 
-      <p>
-        Are we truly benefiting from the sun?
-        Being exposed to sunlight doesn’t always mean your body is
-        producing enough Vitamin D. Many factors can affect how much
-        your body actually gets.
-      </p>
-    </article>
+        <p>
+          Is the sunlight you’re getting enough to meet your body’s
+          Vitamin D needs?
+        </p>
+      </article>
 
-    <article>
-      <span className="fact-no">03</span>
+      <article>
+        <span className="fact-no">03</span>
 
-      <h3>Know Your Status</h3>
+        <h3>Know Your Status</h3>
 
-      <p>
-        Do you know how much Vitamin D your body is getting?
-        The answer isn’t always visible. Knowing your Vitamin D status
-        can help you understand what your body needs and make more
-        informed choices.
-      </p>
-    </article>
+        <p>
+          Find out whether your body has enough Vitamin D to meet its
+          daily needs.
+        </p>
+      </article>
 
     </div>
 
@@ -665,7 +660,7 @@ if (window.location.pathname === '/check-in') {
         text-white
       "
     >
-      Your sunshine isn’t
+      Your sunshine isn’t{' '}
       <br className="hidden sm:block" />
       <span className="sm:ml-3">only above you.</span>
     </h2>
@@ -743,16 +738,18 @@ if (window.location.pathname === '/check-in') {
         <div className="shell rsvp-grid">
           <div className="rsvp-copy">
             <span className="section-kicker">YOUR INVITATION</span>
-        <h2>
-          Join us for
-          <br />
+<h2>
+  Join us for
+  <br />
 
-<img
-  src="/assets/shamsak-gowak-text.png"
-  alt="شمسك جواك"
-  className="w-[380px] max-w-full h-auto -translate-x-12"
-/>
-        </h2>        
+  <span
+    dir="rtl"
+    lang="ar"
+    className="shamsak-gowak-text"
+  >
+    شمسك جواك
+  </span>
+</h2>      
             <p>Confirm your attendance and we’ll keep your invitation details ready for the event.</p>
             <div className="mini-meta"><CalendarDays /> 02 OCT 2026</div>
             <div className="mini-meta"><MapPin /> THE NILE RITZ-CARLTON, CAIRO</div>
@@ -927,8 +924,8 @@ if (window.location.pathname === '/check-in') {
                 Select your specialty
               </option>
 
-              <option value="Influencer">
-                Influencer
+              <option value="Health Advocates">
+                Health Advocates
               </option>
 
               <option value="Nutritionist">
@@ -1178,6 +1175,29 @@ if (window.location.pathname === '/check-in') {
 
                   <label className="block">
 
+                    <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                              <input
+                                type="checkbox"
+                                checked={privacyAccepted}
+                                onChange={(e) =>
+                                  setPrivacyAccepted(e.target.checked)
+                                }
+                                className="
+                                  mt-1 h-4 w-4
+                                  shrink-0
+                                  rounded
+                                  border-neutral-300
+                                  accent-orange-500
+                                "
+                              />
+
+                              <span className="text-sm leading-relaxed text-neutral-700">
+                                This invitation is private. Please do not share it
+                                with anyone. By continuing, you agree to keep your
+                                invitation details confidential.
+                              </span>
+                            </label>
+
                     <span className="mb-2 block text-sm font-medium">
                       Mobile number
                     </span>
@@ -1234,7 +1254,7 @@ if (window.location.pathname === '/check-in') {
 
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || !privacyAccepted}
                     className="
                       button button-primary full
                       w-full transition
@@ -1503,8 +1523,8 @@ if (window.location.pathname === '/check-in') {
         <div className="shell footer-inner">
           <img src="/assets/limitless_black.png" alt="Limitless Naturals" />
           <div>
-            <strong>شمسك جواك</strong>
-            <span>LIMITLESS OSSOFORTIN LAUNCH EVENT • 2026</span>
+          <strong> شمسك جواك </strong>
+            <span>Sponsored by LIMITLESS OSSOFORTIN</span>
           </div>
         </div>
       </footer>
